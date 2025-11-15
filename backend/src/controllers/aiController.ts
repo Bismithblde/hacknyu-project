@@ -7,14 +7,22 @@ export const analyzeHazardHandler = (
   req: Request,
   res: Response<ApiResponse<AiAnalysisResult>>,
 ) => {
-  const { description, photoUrl } = req.body;
-  if (!isValidString(description)) {
-    return res.status(400).json({ success: false, message: "Invalid or missing description" });
-  }
-  if (photoUrl !== undefined && !isValidOptionalUrl(photoUrl)) {
-    return res.status(400).json({ success: false, message: "Invalid photoUrl format" });
-  }
+  try {
+    const { description, photoUrl } = req.body;
+    if (!isValidString(description)) {
+      return res.status(400).json({ success: false, message: "Invalid or missing description" });
+    }
+    if (photoUrl !== undefined && !isValidOptionalUrl(photoUrl)) {
+      return res.status(400).json({ success: false, message: "Invalid photoUrl format" });
+    }
 
-  const ai = analyzeHazard(description, photoUrl);
-  res.json({ success: true, data: ai });
+    const ai = analyzeHazard(description, photoUrl);
+    res.json({ success: true, data: ai });
+  } catch (error) {
+    console.error("Error analyzing hazard:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to analyze hazard",
+    });
+  }
 };

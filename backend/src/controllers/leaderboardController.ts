@@ -6,6 +6,14 @@ export const listLeaderboard = (
   _req: Request,
   res: Response<ApiResponse<LeaderboardEntry[]>>,
 ) => {
-  const leaderboard = getLeaderboard();
-  res.json({ success: true, data: leaderboard });
+  try {
+    const leaderboard = getLeaderboard();
+    res.json({ success: true, data: leaderboard });
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch leaderboard",
+    });
+  }
 };

@@ -30,5 +30,14 @@ export const awardPointsHandler = (
 };
 
 export const listPointRules = (_req: Request, res: Response<ApiResponse<Record<string, number>>>) => {
-  res.json({ success: true, data: getPointRules() });
+  try {
+    const rules = getPointRules();
+    res.json({ success: true, data: rules });
+  } catch (error) {
+    console.error("Error fetching point rules:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch point rules",
+    });
+  }
 };
