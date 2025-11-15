@@ -50,80 +50,178 @@ export default function ReportPage() {
   const leafletRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
+  const isInitializingRef = useRef<boolean>(false);
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    if (!mapRef.current || leafletRef.current) return;
+    // Check if container exists or if already initializing
+    if (!mapRef.current || isInitializingRef.current) return;
     
+    // Prevent double initialization (React StrictMode protection)
+    if (leafletRef.current) return;
+    
+    // Check if Leaflet has already initialized this container
+    if (mapRef.current && (mapRef.current as any)._leaflet_id) {
+      return;
+    }
+    
+    isInitializingRef.current = true;
     let cleanup: (() => void) | undefined;
+    let timeoutId: NodeJS.Timeout | undefined;
+    let isMounted = true;
+    
+    // Cleanup function to remove any existing map
+    const cleanupExistingMap = () => {
+      if (leafletRef.current) {
+        try {
+          leafletRef.current.remove();
+        } catch (error) {
+          // Ignore errors during cleanup
+        }
+        leafletRef.current = null;
+      }
+    };
     
     // Ensure the container has a size before initializing
-    if (mapRef.current.offsetHeight === 0) {
-      // Wait for next frame if container isn't ready
-      requestAnimationFrame(() => {
-        if (!mapRef.current || leafletRef.current) return;
-        cleanup = initializeMap();
-      });
+    const initMap = () => {
+      if (!isMounted || !mapRef.current) {
+        isInitializingRef.current = false;
+        return;
+      }
+      
+      // Final check before initialization - ensure no existing map
+      if (leafletRef.current || (mapRef.current as any)._leaflet_id) {
+        cleanupExistingMap();
+        isInitializingRef.current = false;
+        return;
+      }
+      
+      // Double-check container is ready
+      if (mapRef.current.offsetHeight === 0 || mapRef.current.offsetWidth === 0) {
+        timeoutId = setTimeout(initMap, 50);
+        return;
+      }
+      
+      cleanup = initializeMap();
+      isInitializingRef.current = false;
+    };
+
+    function initializeMap(): () => void {
+      if (!mapRef.current) {
+        isInitializingRef.current = false;
+        return () => {};
+      }
+      
+      // Final safety check
+      if (leafletRef.current || (mapRef.current as any)._leaflet_id) {
+        isInitializingRef.current = false;
+        return () => {};
+      }
+      
+      try {
+        const map = L.map(mapRef.current!, { 
+          zoomControl: true,
+          preferCanvas: false
+        }).setView(defaultView, 13);
+        
+        leafletRef.current = map;
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        // Invalidate size after map is fully rendered
+        const invalidateTimeout = setTimeout(() => {
+          if (isMounted && map && mapRef.current && mapRef.current.offsetParent !== null) {
+            try {
+              map.invalidateSize();
+            } catch (error) {
+              console.warn("Failed to invalidate map size:", error);
+            }
+          }
+        }, 200);
+
+        const handleMapClick = (event: LeafletMouseEvent) => {
+          const { lat, lng } = event.latlng;
+          placeOrMoveMarker(lat, lng);
+          setSelectedCoords({ lat, lng });
+        };
+
+        map.on("click", handleMapClick);
+
+        // Handle window resize
+        const handleResize = () => {
+          if (isMounted && map && mapRef.current && mapRef.current.offsetParent !== null) {
+            try {
+              map.invalidateSize();
+            } catch (error) {
+              console.warn("Failed to invalidate map size on resize:", error);
+            }
+          }
+        };
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+          clearTimeout(invalidateTimeout);
+          map.off("click", handleMapClick);
+          window.removeEventListener("resize", handleResize);
+          if (map) {
+            try {
+              map.remove();
+            } catch (error) {
+              // Ignore errors during cleanup
+            }
+          }
+          // Clear the ref after removal
+          if (leafletRef.current === map) {
+            leafletRef.current = null;
+          }
+          isInitializingRef.current = false;
+          objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        };
+      } catch (error) {
+        console.error("Error initializing map:", error);
+        isInitializingRef.current = false;
+        return () => {};
+      }
+    }
+
+    // Start initialization
+    if (mapRef.current.offsetHeight === 0 || mapRef.current.offsetWidth === 0) {
+      timeoutId = setTimeout(initMap, 100);
     } else {
       cleanup = initializeMap();
     }
 
-    function initializeMap(): () => void {
-      if (!mapRef.current || leafletRef.current) return () => {};
-      
-      const map = L.map(mapRef.current!, { 
-        zoomControl: true,
-        preferCanvas: false
-      }).setView(defaultView, 13);
-      
-      leafletRef.current = map;
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
-
-      // Invalidate size after a short delay to ensure proper rendering
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
-
-      const handleMapClick = (event: LeafletMouseEvent) => {
-        const { lat, lng } = event.latlng;
-        placeOrMoveMarker(lat, lng);
-        setSelectedCoords({ lat, lng });
-      };
-
-      map.on("click", handleMapClick);
-
-      // Handle window resize
-      const handleResize = () => {
-        map.invalidateSize();
-      };
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        map.off("click", handleMapClick);
-        window.removeEventListener("resize", handleResize);
-        map.remove();
-        objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-      };
-    }
-
     return () => {
-      if (cleanup) cleanup();
+      isMounted = false;
+      isInitializingRef.current = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      cleanupExistingMap();
+      if (cleanup) {
+        cleanup();
+      }
     };
   }, []);
 
   // Invalidate map size when sidebar toggles
   useEffect(() => {
-    if (leafletRef.current) {
-      setTimeout(() => {
-        leafletRef.current?.invalidateSize();
+    if (leafletRef.current && mapRef.current && mapRef.current.offsetParent !== null) {
+      const timeoutId = setTimeout(() => {
+        if (leafletRef.current && mapRef.current && mapRef.current.offsetParent !== null) {
+          try {
+            leafletRef.current.invalidateSize();
+          } catch (error) {
+            console.warn("Failed to invalidate map size on sidebar toggle:", error);
+          }
+        }
       }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [sidebarOpen]);
 
