@@ -1,5 +1,19 @@
-import React from "react";
+import SideNav from './components/SideNav';
+import Hero from './components/Hero';
+import About from './components/About';
+import ReportSection from './components/ReportSection';
 
-export default function App() {
-  return <div className="text-3xl font-bold underline">App</div>;
+function App() {
+  return (
+    <>
+      <SideNav />
+      <main>
+        <Hero />
+        <About />
+        <ReportSection />
+      </main>
+    </>
+  );
 }
+
+export default App;
