@@ -19,7 +19,7 @@ import type {
   LeaderboardEntry,
   PointsAward,
   PointsAction,
-} from "../types/api";
+} from "@/types/api";
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
@@ -35,13 +35,14 @@ interface RequestOptions extends RequestInit {
  * Custom error class for API errors
  */
 export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public data?: unknown,
-  ) {
+  statusCode: number;
+  data?: unknown;
+
+  constructor(statusCode: number, message: string, data?: unknown) {
     super(message);
     this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.data = data;
   }
 }
 

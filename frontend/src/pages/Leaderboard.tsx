@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../utils/api";
-import type { LeaderboardEntry } from "../types/api";
+import api from "@/utils/api";
+import type { LeaderboardEntry } from "@/types/api";
 
 export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
