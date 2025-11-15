@@ -1,14 +1,24 @@
 import { Request, Response } from "express";
 import { awardPoints, getPointRules } from "../services/pointsService";
-import { ApiResponse, PointsAction, PointsAward } from "../types";
+import { ApiResponse, PointsAward } from "../types";
+import { isValidId, isValidPointsAction } from "../utils/validation";
 
 export const awardPointsHandler = (
   req: Request,
   res: Response<ApiResponse<PointsAward>>,
 ) => {
-  const { userId, action } = req.body as { userId: string; action: PointsAction };
-  if (!userId || !action) {
-    return res.status(400).json({ success: false, message: "userId and action required" });
+  const { userId, action } = req.body;
+
+  // Validate required fields
+  if (!isValidId(userId)) {
+    return res.status(400).json({ success: false, message: "Invalid or missing userId" });
+  }
+  if (!isValidPointsAction(action)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Invalid action. Must be one of: create_pin, verify_pin, submit_report, upload_confirmation, mark_resolved",
+    });
   }
 
   try {

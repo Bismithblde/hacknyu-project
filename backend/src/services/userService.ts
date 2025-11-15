@@ -1,6 +1,29 @@
 import { store } from "./dataStore";
 import { LeaderboardEntry, User } from "../types";
 
+export interface UserStats {
+  userId: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  points: number;
+  xp: number;
+  level: string;
+  trustScore: number;
+  badges: string[];
+  stats: {
+    createdPins: number;
+    verifiedPins: number;
+    submittedReports: number;
+    resolvedPins: number;
+  };
+  recentActivity?: {
+    lastPinCreated?: string;
+    lastVerification?: string;
+    lastReportSubmitted?: string;
+  };
+}
+
 export const getAllUsers = (): User[] => {
   return store.listUsers();
 };
@@ -42,4 +65,64 @@ export const getLeaderboard = (): LeaderboardEntry[] => {
       level: user.level,
       badges: user.badges,
     }));
+};
+
+export const getUserStats = (userId: string): UserStats | undefined => {
+  const user = store.getUser(userId);
+  if (!user) {
+    return undefined;
+  }
+
+  // Get all pins created by this user
+  const createdPins = store.listPins().filter((pin) => pin.userId === userId);
+  const createdPinsCount = createdPins.length;
+  const resolvedPinsCount = createdPins.filter((pin) => pin.status === "resolved").length;
+
+  // Get all verifications by this user
+  const verifications = store.listVerificationsForUser(userId);
+  const verifiedPinsCount = verifications.length;
+
+  // Get all confirmations/reports by this user
+  const confirmations = store.listConfirmationsForUser(userId);
+  const submittedReportsCount = confirmations.filter(
+    (c) => c.reportType === "official-report"
+  ).length;
+
+  // Get recent activity timestamps
+  const lastPinCreated = createdPins.length > 0
+    ? createdPins.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt
+    : undefined;
+
+  const lastVerification = verifications.length > 0
+    ? verifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt
+    : undefined;
+
+  const lastReportSubmitted = confirmations.length > 0
+    ? confirmations
+        .filter((c) => c.reportType === "official-report")
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.createdAt
+    : undefined;
+
+  return {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
+    points: user.points,
+    xp: user.xp,
+    level: user.level,
+    trustScore: user.trustScore,
+    badges: user.badges,
+    stats: {
+      createdPins: createdPinsCount,
+      verifiedPins: verifiedPinsCount,
+      submittedReports: submittedReportsCount,
+      resolvedPins: resolvedPinsCount,
+    },
+    recentActivity: {
+      lastPinCreated,
+      lastVerification,
+      lastReportSubmitted,
+    },
+  };
 };

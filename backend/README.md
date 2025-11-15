@@ -45,19 +45,50 @@ npm start
 
 ## API Routes
 
-### Public Routes
+## Feature Modules & Routes
 
-- `GET /` - Welcome message
-- `GET /api/v1/health` - Health check endpoint
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get user by ID
-- `POST /api/v1/users` - Create a new user
+> Authentication endpoints live under `/api/v1/auth` (see [AUTH.md](./AUTH.md)).  
+> Everything below scaffolds the rest of the civic hazard platform.
 
-### Protected Routes (Require Authentication)
+### Health & Diagnostics
 
-All protected routes require `Authorization: Bearer <token>` header.
+- `GET /api/v1/health` — heartbeat payload with uptime
+- `GET /api/v1/test-route` — simple connectivity test
 
-See [AUTH.md](./AUTH.md) for detailed authentication documentation and how to use the `authenticate` middleware.
+### Users
+
+- `GET /api/v1/users` — list seeded demo users
+- `GET /api/v1/users/:id` — fetch a single user
+- `POST /api/v1/users` — create a user (stored in memory)
+
+### Pins & Hazard Lifecycle
+
+- `GET /api/v1/pins` — list hazards, including AI metadata and verification stats
+- `POST /api/v1/pins` — create a pin; runs the request through `aiService` for category/agency heuristics and awards creator points
+- `GET /api/v1/pins/:id` — fetch a single pin
+- `POST /api/v1/pins/:id/resolve` — mark a pin as resolved and reward the acting user
+
+### AI Assist
+
+- `POST /api/v1/ai/analyze` — lightweight rule-based classifier that returns severity, recommended agency, and fraud flags for a description/photo
+
+### Community Verification
+
+- `POST /api/v1/verifications` — cast a validity vote on a pin; updates verification stats and awards points
+- `GET /api/v1/confirmations` — list supplemental evidence, optionally filtered by `?pinId=`
+- `POST /api/v1/confirmations` — upload official reports or confirmations (earns higher points for official documentation)
+
+### Gamification & Reputation
+
+- `GET /api/v1/points/rules` — expose the server-side `PointsAction` → value map
+- `POST /api/v1/points` — manually trigger a points award (useful for automated jobs/tests)
+- `GET /api/v1/leaderboard` — sorted leaderboard derived from user stats
+
+### Open Data
+
+- `GET /api/v1/dataset` — sanitized dataset export of all pins, suitable for public sharing
+
+All non-auth routes currently run against an in-memory data store (`services/dataStore.ts`) so the API works out-of-the-box for demos. Swap in a persistent store later by re-implementing the same interface.
 
 ## Project Structure
 

@@ -62,6 +62,15 @@ export const recordVerification = (payload: VerificationPayload) => {
     throw new Error("Pin not found");
   }
 
+  // Check if user already voted on this pin
+  const existingVerifications = store.listVerificationsForPin(payload.pinId);
+  const hasExistingVote = existingVerifications.some(
+    (v) => v.userId === payload.userId
+  );
+  if (hasExistingVote) {
+    throw new Error("User has already voted on this pin");
+  }
+
   const voteValue = payload.vote === "valid" ? 1 : -1;
   pin.verificationStats.upvotes += voteValue > 0 ? 1 : 0;
   pin.verificationStats.downvotes += voteValue < 0 ? 1 : 0;

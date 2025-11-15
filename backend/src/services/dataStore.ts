@@ -185,6 +185,10 @@ class InMemoryStore {
     return Array.from(this.verifications.values()).filter((v) => v.pinId === pinId);
   }
 
+  listVerificationsForUser(userId: string) {
+    return Array.from(this.verifications.values()).filter((v) => v.userId === userId);
+  }
+
   addConfirmation(confirmation: ReportConfirmation) {
     this.confirmations.set(confirmation.id, confirmation);
   }
@@ -193,6 +197,10 @@ class InMemoryStore {
     const all = Array.from(this.confirmations.values());
     if (!pinId) return all;
     return all.filter((c) => c.pinId === pinId);
+  }
+
+  listConfirmationsForUser(userId: string) {
+    return Array.from(this.confirmations.values()).filter((c) => c.userId === userId);
   }
 
   hashString(value: string) {

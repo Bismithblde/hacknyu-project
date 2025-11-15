@@ -5,7 +5,17 @@ import routes from "./routes";
 const app: Express = express();
 
 // Middleware
-app.use(cors());
+// CORS configuration - allow requests from frontend development server
+app.use(cors({
+  origin: process.env.FRONTEND_URL || [
+    "http://localhost:5173", // Vite default port
+    "http://localhost:3000",  // Common React dev port
+    "http://localhost:5174",  // Alternative Vite port
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
