@@ -11,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/
 
 interface AuthResponse {
   success: boolean;
+  message?: string;
   data: {
     access_token: string;
     refresh_token: string;
